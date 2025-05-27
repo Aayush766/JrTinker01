@@ -15,7 +15,7 @@ const PORT = process.env.PORT;
 
 app.use(
   cors({
-    origin: ["http://localhost:5234"],
+    origin: ["https://jrtinker.com/"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
