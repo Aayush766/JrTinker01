@@ -1,6 +1,6 @@
 const express = require("express");
 const userModel = require("../models/User");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 const RegisterUser = async (req, res) => {
   console.log("req.body",req.body)
