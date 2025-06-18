@@ -40,7 +40,7 @@ passport.use(
     {
       clientID: process.env.Google_CLIENT_ID,
       clientSecret: process.env.Google_CLIENT_SECRET,
-      callbackURL: "https://jrtinker.com/api/auth/google/callback",
+      callbackURL: "https://jrtinker01.onrender.com/api/auth/google/callback",
       // passReqToCallback   : true
       scope: ["email", "profile"],
     },
