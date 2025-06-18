@@ -8,18 +8,17 @@ const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const passport = require("passport");
 var GoogleStrategy = require("passport-google-oauth2").Strategy;
-const userModel = require("./models/User");
+const userModel = require("./models/User"); // Correct model for user operations
 
 const sessionSecret = process.env.SESSION_SECRET;
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 8000; // Provide a default port
 
 // --- CORS Configuration (FIXED) ---
-// Changed origin from localhost to your Hostinger frontend URL
 app.use(
   cors({
-    origin: ["https://jrtinker.com"], // Ensure this matches your frontend domain exactly
+    origin: ["https://jrtinker.com", "http://localhost:3000"], // Added localhost for dev, remove in pure prod
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true, // Important for sending/receiving cookies across origins
+    credentials: true,
   })
 );
 
@@ -32,13 +31,11 @@ app.use(
   session({
     resave: false,
     saveUninitialized: true,
-    secret: sessionSecret, // Ensure this is a strong, unique secret
+    secret: sessionSecret,
     cookie: {
-      secure: true, // Essential for HTTPS in production (Render provides HTTPS)
-      httpOnly: true, // Good security practice: prevents client-side JS access to cookie
+      secure: true, // Essential for HTTPS in production
+      httpOnly: true, // Prevents client-side JS access to cookie
       sameSite: 'none', // Crucial for cross-origin cookie sending (Hostinger to Render)
-      // Optional: Add maxAge if you want sessions to expire after a certain time, e.g.:
-      // maxAge: 24 * 60 * 60 * 1000 // Session lasts for 24 hours
     }
   })
 );
@@ -49,45 +46,49 @@ app.use(passport.session());
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.Google_CLIENT_ID,
-      clientSecret: process.env.Google_CLIENT_SECRET,
-      // --- Google OAuth callbackURL (FIXED) ---
-      // This must be your Render backend's public URL for the callback endpoint
+      clientID: process.env.GOOGLE_CLIENT_ID, // Ensure env variable name is correct
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET, // Ensure env variable name is correct
       callbackURL: "https://jrtinker01.onrender.com/api/auth/google/callback",
       scope: ["email", "profile"],
     },
     async (request, accessToken, refreshToken, profile, done) => {
-      // console.log("profile: ", profile);
       try {
-        const userExist = await userModel.findOne({ googleID: profile.id });
+        let user = await userModel.findOne({ googleID: profile.id }); // Use 'let'
 
-        if (!userExist) {
-          userModel.create({
+        if (!user) { // If user does not exist, create new user
+          user = await userModel.create({ // Await creation and assign to 'user'
             googleID: profile.id,
             profilepic: profile.photos[0].value,
             email: profile.emails[0].value,
             username: profile.displayName,
           });
         }
-
-        return done(null, userExist);
+        return done(null, user); // Always return the found or newly created user
       } catch (error) {
-        // Ensure 'err' is defined if 'error' is caught
-        return done(error, null); // Pass error as first argument, null user
+        console.error("Google Strategy Error:", error); // Log Passport errors
+        return done(error, null);
       }
     }
   )
 );
 
 passport.serializeUser(function (user, done) {
-  console.log("serialize user: ",user)
-  done(null, user);
+  // Serialize only essential user info to session, like ID
+  // This reduces session size and makes deserialization more efficient
+  done(null, user.id); // Store only the user ID
 });
 
-passport.deserializeUser(function (user, done) {
-  console.log("deserialize user: ",user)
-  done(null, user);
+passport.deserializeUser(async function (id, done) {
+  // Deserialize user from session using the stored ID
+  try {
+    const user = await userModel.findById(id);
+    done(null, user); // Pass the retrieved user object
+  } catch (error) {
+    console.error("Deserialize User Error:", error);
+    done(error, null);
+  }
 });
+
 
 app.get(
   "/auth/google",
@@ -97,36 +98,28 @@ app.get(
 app.get(
   "/api/auth/google/callback",
   passport.authenticate("google", {
-    // --- Google OAuth Redirects (FIXED) ---
-    // These must be your Hostinger frontend URLs
     successRedirect: "https://jrtinker.com/courses",
     failureRedirect: "https://jrtinker.com/login",
   }),
   (req, res) => {
-    // Save user data in session manually if needed
-    console.log("google login req is: ",req.session)
-    req.session.user = {
-      id: req.user._id,      // assuming req.user exists and is your DB user
-      name: req.user.username, // Use username from profile, not a generic 'name'
-      email: req.user.email,
-    };
-
-    // Note: The successRedirect/failureRedirect handles the actual redirection.
-    // This block might not execute if the redirect happens immediately.
-    // If you need custom logic AFTER redirect, you might need to handle it differently
-    // or chain middleware that executes before the redirect.
+    // This callback function often doesn't execute as the redirect happens
+    // before it. The user object is already attached to req.user by Passport.
+    // console.log("google login req is: ", req.session);
+    // console.log("User from Passport session in callback:", req.user);
+    // If you need to store more custom data, do it in serialize/deserialize or
+    // in the successRedirected frontend page.
   }
 );
 
 dbConnection()
   .then(() => {
-    console.log("db connection successfull");
+    console.log("DB connection successful");
     app.listen(PORT, () => {
-      console.log(`server is running at port ${PORT} `);
+      console.log(`Server is running at port ${PORT}`);
     });
   })
   .catch((error) => {
-    console.log("db index.js error: ", error);
+    console.error("DB connection error:", error); // Use console.error for errors
   });
 
 app.use("/", router);
