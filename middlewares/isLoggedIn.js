@@ -1,14 +1,10 @@
 const jwt = require("jsonwebtoken");
 
-
-
 const isLoggedIn = (req, res, next) => {
 
   // Check for JWT in the cookies
 
   const token = req.cookies["jwt-intern-token"];
-
-
 
   console.log("req.session:", req.session);
 
