@@ -1,13 +1,12 @@
+// controllers/updateCourse.js
 const Course = require("../models/course.model.js");
+// No need to import slugify here if handled by model's pre-save hook
 
 const updateCourse = async (req, res) => {
   try {
     const {
       id,
-      courseName,
-      // Removed courseDescription and courseImage from destructuring
-      // courseDescription,
-      // courseImage,
+      courseName, // Keep courseName in destructuring
       courseDuration,
       ageGroup,
       coursePrice,
@@ -16,153 +15,151 @@ const updateCourse = async (req, res) => {
       instructorName,
       courseRating,
       faqs,
-      metaDescription, 
-      metaKeywords,    
-      metaTitle,   
-      // ✨ NEW FIELD IN REQ.BODY ✨
-      contentBlocks, 
+      metaDescription,
+      metaKeywords,
+      metaTitle,
+      contentBlocks,
     } = req.body;
 
     console.log("req.body :", req.body);
-    // Check if the course exists
     const course = await Course.findById(id);
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Validate required fields (consider making this more granular)
     if (
       !courseName ||
-      // Removed validation for courseDescription
-      // !courseDescription || 
       !courseDuration ||
       !ageGroup ||
       typeof ageGroup.min !== "number" ||
       typeof ageGroup.max !== "number" ||
       !instructorName
     ) {
-      return res.status(400).json({ message: "Required fields are missing or invalid" });
+      return res
+        .status(400)
+        .json({ message: "Required fields are missing or invalid" });
     }
 
-    // Validate ageGroup logic
     if (ageGroup.min > ageGroup.max) {
-      return res.status(400).json({ error: "Minimum age cannot be greater than maximum age." });
+      return res
+        .status(400)
+        .json({ error: "Minimum age cannot be greater than maximum age." });
     }
 
-    // Price validation
-    if (typeof coursePrice !== 'number' || coursePrice < 0) {
-      return res.status(400).json({ error: "Course price must be a non-negative number." });
+    if (typeof coursePrice !== "number" || coursePrice < 0) {
+      return res
+        .status(400)
+        .json({ error: "Course price must be a non-negative number." });
     }
 
-    // Validate originalPrice if a discount is applied
     if (isDiscounted) {
-      if (typeof originalPrice !== 'number' || originalPrice <= 0) {
+      if (typeof originalPrice !== "number" || originalPrice <= 0) {
         return res.status(400).json({
-          error: "Original price must be a positive number when discounted."
+          error: "Original price must be a positive number when discounted.",
         });
       }
       if (originalPrice <= coursePrice) {
         return res.status(400).json({
-          error: "Original price must be greater than course price when discounted."
+          error:
+            "Original price must be greater than course price when discounted.",
         });
       }
     } else {
       if (originalPrice && originalPrice !== coursePrice) {
         return res.status(400).json({
-          error: "Original price should match course price or be absent when not discounted."
+          error:
+            "Original price should match course price or be absent when not discounted.",
         });
       }
     }
 
-    // --- NEW VALIDATION FOR contentBlocks ---
-    if (!contentBlocks || !Array.isArray(contentBlocks) || contentBlocks.length === 0) {
-      return res.status(400).json({ error: "Content blocks array is required and cannot be empty." });
+    if (
+      !contentBlocks ||
+      !Array.isArray(contentBlocks) ||
+      contentBlocks.length === 0
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Content blocks array is required and cannot be empty." });
     }
     for (const block of contentBlocks) {
-      if (typeof block !== 'object' || !block.type || !block.value) {
-        return res.status(400).json({ error: "Each content block must be an object with 'type' and 'value'." });
+      if (typeof block !== "object" || !block.type || !block.value) {
+        return res.status(400).json({
+          error: "Each content block must be an object with 'type' and 'value'.",
+        });
       }
-      // Optional: Add more specific validation based on block.type if needed
-      // E.g., if block.type === 'image', ensure block.value is a valid URL
     }
-    // --- END NEW VALIDATION FOR contentBlocks ---
 
-
-    // --- NEW VALIDATION FOR FAQS (Optional, but good practice) ---
-    if (faqs !== undefined && !Array.isArray(faqs)) { // Check if faqs is provided and not an array
+    if (faqs !== undefined && !Array.isArray(faqs)) {
       return res.status(400).json({ error: "FAQs must be an array if provided." });
     }
-    if (faqs) { // If faqs array is provided, validate its contents
+    if (faqs) {
       for (const faq of faqs) {
-        if (typeof faq !== 'object' || !faq.question || !faq.answer) {
-          return res.status(400).json({ error: "Each FAQ must be an object with 'question' and 'answer'." });
+        if (typeof faq !== "object" || !faq.question || !faq.answer) {
+          return res.status(400).json({
+            error: "Each FAQ must be an object with 'question' and 'answer'.",
+          });
         }
       }
     }
 
-    if (metaDescription !== undefined && typeof metaDescription !== 'string') {
-        return res.status(400).json({ error: "Meta description must be a string if provided." });
+    if (metaDescription !== undefined && typeof metaDescription !== "string") {
+      return res.status(400).json({ error: "Meta description must be a string if provided." });
     }
-    if (metaKeywords !== undefined && typeof metaKeywords !== 'string') {
-        return res.status(400).json({ error: "Meta keywords must be a string if provided." });
+    if (metaKeywords !== undefined && typeof metaKeywords !== "string") {
+      return res.status(400).json({ error: "Meta keywords must be a string if provided." });
     }
-    if (metaTitle !== undefined && typeof metaTitle !== 'string') {
-        return res.status(400).json({ error: "Meta title must be a string if provided." });
+    if (metaTitle !== undefined && typeof metaTitle !== "string") {
+      return res.status(400).json({ error: "Meta title must be a string if provided." });
     }
-    // --- END NEW VALIDATION ---
 
-    // Prepare update object
     const updateFields = {
       courseName,
-      // Removed courseDescription and courseImage from updateFields
-      // courseDescription,
-      // courseImage,
       courseDuration,
       ageGroup,
       coursePrice,
       originalPrice: isDiscounted ? originalPrice : coursePrice,
       isDiscounted,
       instructorName,
-      // ✨ ADD contentBlocks to updateFields ✨
-      contentBlocks, 
+      contentBlocks,
     };
 
-    // Conditionally update courseRating if provided
     if (courseRating !== undefined) {
       updateFields.courseRating = courseRating;
     }
 
-    // Conditionally update faqs if provided
-    if (faqs !== undefined) { 
+    if (faqs !== undefined) {
       updateFields.faqs = faqs;
     }
 
     if (metaDescription !== undefined) {
-        updateFields.metaDescription = metaDescription;
+      updateFields.metaDescription = metaDescription;
     }
     if (metaKeywords !== undefined) {
-        updateFields.metaKeywords = metaKeywords;
+      updateFields.metaKeywords = metaKeywords;
     }
     if (metaTitle !== undefined) {
-        updateFields.metaTitle = metaTitle;
+      updateFields.metaTitle = metaTitle;
     }
-    
-    // Update the course
+
     const updatedCourse = await Course.findByIdAndUpdate(
       id,
-      updateFields, // Use the prepared updateFields object
-      { new: true, runValidators: true }
+      updateFields,
+      { new: true, runValidators: true } // runValidators is crucial for pre-save hook to fire
     );
 
     return res.status(200).json({
       message: "Course updated successfully",
       course: updatedCourse,
     });
-
   } catch (error) {
     console.error("Course update error:", error);
-    if (error.name === 'ValidationError') {
-        return res.status(400).json({ message: "Validation failed", errors: error.errors });
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+    }
+    // Handle duplicate key error for slug specifically
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.slug) {
+        return res.status(409).json({ message: "Course name already exists. Please choose a unique name.", error: error.message });
     }
     return res.status(500).json({ message: "Server error", error: error.message });
   }

@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+// Import slugify
+const slugify = require("slugify"); // <<< ADD THIS
 
 const courseSchema = new mongoose.Schema(
   {
@@ -6,35 +8,29 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // Removed courseDescription and courseImage to be replaced by contentBlocks
-    // courseDescription: {
-    //   type: String,
-    //   required: true,
-    // },
-    // courseImage: {
-    //   type: String,
-    //   default: null,
-    // },
-    
-    // ✨ NEW FIELD FOR DYNAMIC CONTENT BLOCKS ✨
+    // Add the slug field
+    slug: {
+      type: String,
+      unique: true, // Ensure slugs are unique
+      index: true, // Add an index for faster lookups
+    },
+    // ... (rest of your existing fields)
     contentBlocks: [
       {
         type: {
           type: String,
-          enum: ['paragraph', 'image', 'heading', 'list'], // Define allowed content types
+          enum: ["paragraph", "image", "heading", "list"],
           required: true,
         },
-        value: { // For text content (paragraph, heading, list item) or image URL
+        value: {
           type: String,
           required: true,
         },
-        alt: { // Optional alt text for images, good for accessibility
+        alt: {
           type: String,
         },
-        // You can add more specific fields for other block types if needed
       },
     ],
-
     courseDuration: {
       type: String,
       required: true,
@@ -75,24 +71,33 @@ const courseSchema = new mongoose.Schema(
         answer: { type: String, required: true },
       },
     ],
-    // ✨ NEW FIELD FOR META DESCRIPTION ✨
     metaDescription: {
-        type: String,
-        default: "Discover exciting STEM courses for future skills and innovation.", // Provide a sensible default
+      type: String,
+      default: "Discover exciting STEM courses for future skills and innovation.",
     },
-    // ✨ NEW FIELD FOR META KEYWORDS (Optional but good for SEO) ✨
     metaKeywords: {
-        type: String,
-        default: "STEM, courses, online learning, innovation, technology, coding",
+      type: String,
+      default: "STEM, courses, online learning, innovation, technology, coding",
     },
-    // ✨ NEW FIELD FOR META TITLE (Optional, if you want a custom title per course) ✨
     metaTitle: {
-        type: String,
-        default: "STEM Courses | JRTinker",
-    }
+      type: String,
+      default: "STEM Courses | JRTinker",
+    },
   },
   { timestamps: true }
 );
+
+// Pre-save hook to generate the slug
+courseSchema.pre("save", function (next) {
+  if (this.isModified("courseName") || !this.slug) { // Only generate if courseName changes or slug is new
+    this.slug = slugify(this.courseName, {
+      lower: true,    // Convert to lowercase
+      strict: true,   // Remove special characters
+      trim: true,     // Trim leading/trailing spaces
+    });
+  }
+  next();
+});
 
 const Course = mongoose.model("Course", courseSchema);
 module.exports = Course;
