@@ -6,7 +6,7 @@ const { Readable } = require("stream");
 // Assuming this is your Mongoose model for blogs
 // You must have this file defined for the code to work
 const Blog = require("../models/blog.model.js"); 
-const Course = require("../models/Course"); // Assuming you have a Course model
+const Course = require("../models/course.model.js"); // Assuming you have a Course model
 
 router.get("/sitemap.xml", async (req, res) => {
   try {
