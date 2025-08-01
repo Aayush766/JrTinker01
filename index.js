@@ -11,6 +11,7 @@ const passport = require("passport"); // Passport authentication middleware
 const GoogleStrategy = require("passport-google-oauth2").Strategy; // Google OAuth 2.0 strategy
 const userModel = require("./models/User"); // Your User Mongoose model
 const compression = require('compression'); // Gzip compression middleware
+const sitemapRouter = require("./routes/sitemap");
 
 const sessionSecret = process.env.SESSION_SECRET;
 const PORT = process.env.PORT || 8000; // Define server port, with a default
@@ -34,6 +35,7 @@ app.use(
   })
 );
 
+app.use("/", sitemapRouter);
 // --- Session Configuration (for Passport and general session management) ---
 app.use(
   session({
