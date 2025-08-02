@@ -40,6 +40,7 @@ app.use(
     origin: [
       "https://jrtinker.com",
       "http://localhost:5234",
+    "http://localhost:5000",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
