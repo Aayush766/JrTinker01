@@ -41,6 +41,7 @@ app.use(
       "https://jrtinker.com",
       "http://localhost:5234",
     "http://localhost:5000",
+    "https://www.jrtinker.com"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
