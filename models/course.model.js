@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 // Import slugify
 const slugify = require("slugify"); // <<< ADD THIS
-
+const { notifyGoogle } = require('../indexingApi');
 const courseSchema = new mongoose.Schema(
   {
     courseName: {
@@ -95,6 +95,16 @@ courseSchema.pre("save", function (next) {
       strict: true,   // Remove special characters
       trim: true,     // Trim leading/trailing spaces
     });
+  }
+  next();
+});
+
+courseSchema.post("save", function (doc, next) {
+  // The 'isNew' flag ensures this only runs when a course is first created
+  if (this.isNew) {
+    const courseUrl = `https://jrtinker.com/courses/${doc.slug}`;
+    console.log(`New course created. Notifying Google at: ${courseUrl}`);
+    notifyGoogle(courseUrl, "URL_UPDATED");
   }
   next();
 });

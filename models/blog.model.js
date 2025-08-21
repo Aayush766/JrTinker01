@@ -1,5 +1,6 @@
 // models/blog.model.js
 const mongoose = require("mongoose");
+const { notifyGoogle } = require("../indexingApi");
 
 const blogSchema = new mongoose.Schema(
   {
@@ -112,6 +113,15 @@ blogSchema.pre("validate", function (next) {
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
       .trim();
+  }
+  next();
+});
+
+blogSchema.post("save", function (doc, next) {
+  if (this.isNew) { // Only runs when the document is first created
+    const blogUrl = `https://jrtinker.com/blog/${doc.slug}`;
+    console.log(`New blog post created. Notifying Google at: ${blogUrl}`);
+    notifyGoogle(blogUrl, "URL_UPDATED");
   }
   next();
 });
