@@ -142,6 +142,9 @@ app.get(
 
 // --- Mount your custom API routes ---
 // The order is important
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
 app.use('/', authRouter);
 app.use("/", sitemapRouter);
 app.use("/admin", adminRouter);
