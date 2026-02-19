@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const User = require('../models/User'); // Ensure this points to your main User model
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 console.log('auth.routes.js file loaded and ready.');
